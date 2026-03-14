@@ -30,6 +30,8 @@ AsyncUDP udp;
 SparkFun_VL53L5CX myImager;
 VL53L5CX_ResultsData measurementData;
 
+using DistanceType = std::remove_extent_t<decltype(VL53L5CX_ResultsData::distance_mm)>;
+
 int imageResolution{};
 int imageWidth{};
 
@@ -100,6 +102,7 @@ void stop() {
 bool g_forwardEnabled{};
 unsigned long g_lastControlTime{};
 constexpr unsigned long CONTROL_TIMEOUT{ 100 };  // ms
+constexpr DistanceType OBSTACLE_THRESHOLD_MM{ 100 };
 
 void handleInput(const char input) {
   constexpr int slowSpeed{ 130 };
@@ -155,7 +158,7 @@ void setupUdpServer() {
             return;
           }
           if (myImager.getRangingData(&measurementData)) {
-            constexpr auto dataSize{ sizeof(std::remove_extent_t<decltype(measurementData.distance_mm)>) };
+            constexpr auto dataSize{ sizeof(DistanceType) };
             packet.write(reinterpret_cast<uint8_t*>(measurementData.distance_mm), imageResolution * dataSize);
           }
           break;
@@ -205,7 +208,7 @@ void loop() {
 
   int count{};
   for (int i{}; i < imageResolution; ++i) {
-    if (measurementData.distance_mm[i] <= 100) {
+    if (measurementData.distance_mm[i] <= OBSTACLE_THRESHOLD_MM) {
       ++count;
     }
   }
