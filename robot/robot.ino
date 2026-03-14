@@ -1,3 +1,5 @@
+#include "config.h"
+
 #include <WiFi.h>
 #include <NetworkClient.h>
 #include <WiFiAP.h>
@@ -8,20 +10,6 @@
 
 #include <type_traits>
 
-namespace pins {
-
-constexpr uint8_t PWMB{ 0 };
-constexpr uint8_t BIN2{ 1 };
-constexpr uint8_t BIN1{ 2 };
-constexpr uint8_t AIN1{ 3 };
-constexpr uint8_t AIN2{ 4 };
-constexpr uint8_t PWMA{ 5 };
-constexpr uint8_t SCL{ 7 };
-constexpr uint8_t SDA{ 8 };
-constexpr uint8_t RST{ 9 };
-
-} // pins
-
 const char* ssid{ "secret-wifi-network" };
 const char* password{ "p@ssw0rd" };
 
@@ -29,8 +17,6 @@ AsyncUDP udp;
 
 SparkFun_VL53L5CX myImager;
 VL53L5CX_ResultsData measurementData;
-
-using DistanceType = std::remove_extent_t<decltype(VL53L5CX_ResultsData::distance_mm)>;
 
 uint8_t imageResolution{};
 uint8_t imageWidth{};
@@ -101,33 +87,27 @@ void stop() {
 
 bool g_forwardEnabled{};
 unsigned long g_lastControlTime{};
-constexpr unsigned long CONTROL_TIMEOUT_MS{ 100 };
-constexpr DistanceType OBSTACLE_THRESHOLD_MM{ 100 };
-constexpr uint8_t MAX_BLOCKED_PIXELS{ 12 };
 
 void handleInput(const char input) {
-  constexpr int slowSpeed{ 130 };
-  constexpr int fastSpeed{ 255 };
-
   switch (input) {
     case 'w':
       if (!g_forwardEnabled) {
         return;
       }
-      motor::forward(slowSpeed);
+      motor::forward(control::SLOW_SPEED);
       break;
     case 'W':
       if (!g_forwardEnabled) {
         return;
       }
-      motor::forward(fastSpeed);
+      motor::forward(control::FAST_SPEED);
       break;
-    case 's': motor::reverse(slowSpeed); break;
-    case 'S': motor::reverse(fastSpeed); break;
-    case 'a': motor::left(slowSpeed); break;
-    case 'A': motor::left(fastSpeed); break;
-    case 'd': motor::right(slowSpeed); break;
-    case 'D': motor::right(fastSpeed); break;
+    case 's': motor::reverse(control::SLOW_SPEED); break;
+    case 'S': motor::reverse(control::FAST_SPEED); break;
+    case 'a': motor::left(control::SLOW_SPEED);    break;
+    case 'A': motor::left(control::FAST_SPEED);    break;
+    case 'd': motor::right(control::SLOW_SPEED);   break;
+    case 'D': motor::right(control::FAST_SPEED);   break;
     default: break;
   }
 
@@ -159,8 +139,10 @@ void setupUdpServer() {
             return;
           }
           if (myImager.getRangingData(&measurementData)) {
-            constexpr auto dataSize{ sizeof(DistanceType) };
-            packet.write(reinterpret_cast<uint8_t*>(measurementData.distance_mm), imageResolution * dataSize);
+            packet.write(
+              reinterpret_cast<uint8_t*>(measurementData.distance_mm),
+              imageResolution * sizeof(sensor::DistanceType)
+            );
           }
           break;
         case '1':
@@ -203,17 +185,17 @@ void setup() {
 }
 
 void loop() {
-  if (millis() - g_lastControlTime > CONTROL_TIMEOUT_MS) {
+  if (millis() - g_lastControlTime > control::TIMEOUT_MS) {
     motor::stop();
   }
 
   uint8_t count{};
   for (uint8_t i{}; i < imageResolution; ++i) {
-    if (measurementData.distance_mm[i] <= OBSTACLE_THRESHOLD_MM) {
+    if (measurementData.distance_mm[i] <= control::OBSTACLE_THRESHOLD_MM) {
       ++count;
     }
   }
-  g_forwardEnabled = count <= MAX_BLOCKED_PIXELS;
+  g_forwardEnabled = count <= control::MAX_BLOCKED_PIXELS;
 
   delay(50);
 }
