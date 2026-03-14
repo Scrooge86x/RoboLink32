@@ -20,7 +20,7 @@ constexpr uint8_t SCL{ 7 };
 constexpr uint8_t SDA{ 8 };
 constexpr uint8_t RST{ 9 };
 
-}  // pins
+} // pins
 
 const char* ssid{ "secret-wifi-network" };
 const char* password{ "p@ssw0rd" };
@@ -32,8 +32,8 @@ VL53L5CX_ResultsData measurementData;
 
 using DistanceType = std::remove_extent_t<decltype(VL53L5CX_ResultsData::distance_mm)>;
 
-int imageResolution{};
-int imageWidth{};
+uint8_t imageResolution{};
+uint8_t imageWidth{};
 
 namespace motor {
 
@@ -97,12 +97,13 @@ void stop() {
   analogWrite(pins::PWMB, 255);
 }
 
-}  // motor
+} // motor
 
 bool g_forwardEnabled{};
 unsigned long g_lastControlTime{};
-constexpr unsigned long CONTROL_TIMEOUT{ 100 };  // ms
+constexpr unsigned long CONTROL_TIMEOUT{ 100 }; // ms
 constexpr DistanceType OBSTACLE_THRESHOLD_MM{ 100 };
+constexpr uint8_t MAX_BLOCKED_PIXELS{ 12 };
 
 void handleInput(const char input) {
   constexpr int slowSpeed{ 130 };
@@ -206,13 +207,13 @@ void loop() {
     motor::stop();
   }
 
-  int count{};
-  for (int i{}; i < imageResolution; ++i) {
+  uint8_t count{};
+  for (uint8_t i{}; i < imageResolution; ++i) {
     if (measurementData.distance_mm[i] <= OBSTACLE_THRESHOLD_MM) {
       ++count;
     }
   }
-  g_forwardEnabled = count <= 12;
+  g_forwardEnabled = count <= MAX_BLOCKED_PIXELS;
 
   delay(50);
 }
