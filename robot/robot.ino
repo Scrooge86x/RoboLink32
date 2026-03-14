@@ -101,7 +101,7 @@ void stop() {
 
 bool g_forwardEnabled{};
 unsigned long g_lastControlTime{};
-constexpr unsigned long CONTROL_TIMEOUT{ 100 }; // ms
+constexpr unsigned long CONTROL_TIMEOUT_MS{ 100 };
 constexpr DistanceType OBSTACLE_THRESHOLD_MM{ 100 };
 constexpr uint8_t MAX_BLOCKED_PIXELS{ 12 };
 
@@ -203,7 +203,7 @@ void setup() {
 }
 
 void loop() {
-  if (millis() - g_lastControlTime > CONTROL_TIMEOUT) {
+  if (millis() - g_lastControlTime > CONTROL_TIMEOUT_MS) {
     motor::stop();
   }
 
