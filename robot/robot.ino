@@ -45,7 +45,7 @@ void setup() {
   pinMode(pins::PWMB, OUTPUT);
 }
 
-void forward(const int speed) {
+void reverse(const int speed) {
   digitalWrite(pins::AIN1, HIGH);
   digitalWrite(pins::AIN2, LOW);
   analogWrite(pins::PWMA, speed);
@@ -55,7 +55,7 @@ void forward(const int speed) {
   analogWrite(pins::PWMB, speed);
 }
 
-void reverse(const int speed) {
+void forward(const int speed) {
   digitalWrite(pins::AIN1, LOW);
   digitalWrite(pins::AIN2, HIGH);
   analogWrite(pins::PWMA, speed);
@@ -65,7 +65,7 @@ void reverse(const int speed) {
   analogWrite(pins::PWMB, speed);
 }
 
-void left(const int speed) {
+void right(const int speed) {
   digitalWrite(pins::AIN1, LOW);
   digitalWrite(pins::AIN2, HIGH);
   analogWrite(pins::PWMA, speed);
@@ -75,7 +75,7 @@ void left(const int speed) {
   analogWrite(pins::PWMB, speed);
 }
 
-void right(const int speed) {
+void left(const int speed) {
   digitalWrite(pins::AIN1, HIGH);
   digitalWrite(pins::AIN2, LOW);
   analogWrite(pins::PWMA, speed);
