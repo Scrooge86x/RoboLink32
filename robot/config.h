@@ -27,15 +27,15 @@ constexpr uint16_t udpPort{ 1234 };
 
 } // wifi
 
-namespace sensor {
+namespace distanceSensor {
 
 using DistanceType = std::remove_extent_t<decltype(VL53L5CX_ResultsData::distance_mm)>;
 
-} // sensor
+} // distanceSensor
 
 namespace control {
 
-constexpr sensor::DistanceType OBSTACLE_THRESHOLD_MM{ 100 };
+constexpr distanceSensor::DistanceType OBSTACLE_THRESHOLD_MM{ 100 };
 constexpr uint8_t MAX_BLOCKED_PIXELS{ 12 };
 constexpr int SLOW_SPEED{ 130 };
 constexpr int FAST_SPEED{ 255 };

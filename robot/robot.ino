@@ -1,26 +1,16 @@
 #include "config.h"
+#include "distance-sensor.h"
 #include "motor.h"
 
-#include <WiFi.h>
-#include <NetworkClient.h>
-#include <WiFiAP.h>
 #include <AsyncUDP.h>
-
+#include <WiFi.h>
 #include <Wire.h>
-#include <SparkFun_VL53L5CX_Library.h>
-
-#include <type_traits>
 
 const char* ssid{ "secret-wifi-network" };
 const char* password{ "p@ssw0rd" };
 
 AsyncUDP udp;
-
-SparkFun_VL53L5CX myImager;
-VL53L5CX_ResultsData measurementData;
-
-uint8_t imageResolution{};
-uint8_t imageWidth{};
+DistanceSensor g_distanceSensor{};
 
 bool g_forwardEnabled{};
 unsigned long g_lastControlTime{};
@@ -71,17 +61,13 @@ void setupUdpServer() {
   if (udp.listen(1234)) {
     udp.onPacket([](AsyncUDPPacket packet) {
       switch (packet.data()[0]) {
-        case '0':
-          if (myImager.isDataReady() != true) {
-            return;
-          }
-          if (myImager.getRangingData(&measurementData)) {
-            packet.write(
-              reinterpret_cast<uint8_t*>(measurementData.distance_mm),
-              imageResolution * sizeof(sensor::DistanceType)
-            );
-          }
-          break;
+        case '0': {
+          const auto& measurement{ g_distanceSensor.getLastMeasurement() };
+          packet.write(
+            reinterpret_cast<const uint8_t*>(measurement.distance_mm),
+            g_distanceSensor.getResolution() * sizeof(distanceSensor::DistanceType)
+          );
+        } break;
         case '1':
           Serial.printf("%c", packet.data()[1]);
           handleInput(packet.data()[1]);
@@ -91,32 +77,14 @@ void setupUdpServer() {
   }
 }
 
-void setupSensor() {
-  pinMode(pins::RST, OUTPUT);
-  digitalWrite(pins::RST, LOW);
-
-  Wire.begin(pins::SDA, pins::SCL);
-  Wire.setClock(400000);
-
-  Serial.println("Initializing sensor board. This can take up to 10s. Please wait.");
-  if (myImager.begin() == false) {
-    Serial.println(F("Sensor not found - check your wiring. Freezing"));
-    while (1)
-      ;
-  }
-
-  myImager.setResolution(8 * 8);
-
-  imageResolution = myImager.getResolution();
-  imageWidth = sqrt(imageResolution);
-
-  myImager.startRanging();
-  myImager.setRangingFrequency(15);
-}
-
 void setup() {
   Serial.begin(115200);
-  setupSensor();
+
+  if (!g_distanceSensor.begin()) {
+      while (1)
+        ;
+  }
+
   motor::setup();
   setupUdpServer();
 }
@@ -126,9 +94,12 @@ void loop() {
     motor::stop();
   }
 
+  g_distanceSensor.update();
+  const auto& measurement{ g_distanceSensor.getLastMeasurement() };
+
   uint8_t count{};
-  for (uint8_t i{}; i < imageResolution; ++i) {
-    if (measurementData.distance_mm[i] <= control::OBSTACLE_THRESHOLD_MM) {
+  for (uint8_t i{}; i < g_distanceSensor.getResolution(); ++i) {
+    if (measurement.distance_mm[i] <= control::OBSTACLE_THRESHOLD_MM) {
       ++count;
     }
   }
