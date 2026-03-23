@@ -43,38 +43,42 @@ void handleInput(const char input) {
 
 void setupUdpServer() {
   Serial.println();
-  Serial.println("Configuring access point...");
+  Serial.println(F("Configuring access point..."));
 
   WiFi.mode(WIFI_AP);
   if (!WiFi.softAP(ssid, password)) {
-    log_e("Soft AP creation failed.");
+    Serial.println(F("Soft AP creation failed."));
     while (1)
       ;
   }
 
   IPAddress myIP = WiFi.softAPIP();
-  Serial.print("AP IP address: ");
+  Serial.print(F("AP IP address: "));
   Serial.println(myIP);
 
-  Serial.println("Server started");
+  Serial.println(F("Server started"));
 
-  if (udp.listen(1234)) {
-    udp.onPacket([](AsyncUDPPacket packet) {
-      switch (packet.data()[0]) {
-        case '0': {
-          const auto& measurement{ g_distanceSensor.getLastMeasurement() };
-          packet.write(
-            reinterpret_cast<const uint8_t*>(measurement.distance_mm),
-            g_distanceSensor.getResolution() * sizeof(distanceSensor::DistanceType)
-          );
-        } break;
-        case '1':
-          Serial.printf("%c", packet.data()[1]);
-          handleInput(packet.data()[1]);
-          break;
-      }
-    });
+  if (!udp.listen(1234)) {
+    Serial.println(F("UDP listen failed."));
+    while (1)
+      ;
   }
+
+  udp.onPacket([](AsyncUDPPacket packet) {
+    switch (packet.data()[0]) {
+      case '0': {
+        const auto& measurement{ g_distanceSensor.getLastMeasurement() };
+        packet.write(
+          reinterpret_cast<const uint8_t*>(measurement.distance_mm),
+          g_distanceSensor.getResolution() * sizeof(distanceSensor::DistanceType)
+        );
+      } break;
+      case '1':
+        Serial.printf("%c", packet.data()[1]);
+        handleInput(packet.data()[1]);
+        break;
+    }
+  });
 }
 
 void setup() {
