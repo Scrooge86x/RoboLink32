@@ -43,3 +43,16 @@ bool DistanceSensor::update() {
     }
     return m_imager.getRangingData(&m_lastMeasurement);
 }
+
+uint8_t DistanceSensor::countBlockedPixels(DistanceType threshold, uint8_t border) const {
+    uint8_t count{};
+    for (uint8_t y{ border }; y < m_width - border; ++y) {
+        for (uint8_t x{ border }; x < m_width - border; ++x) {
+            const uint8_t index{ y * m_width + x };
+            if (m_lastMeasurement.distance_mm[index] <= threshold) {
+                ++count;
+            }
+        }
+    }
+    return count;
+}

@@ -5,6 +5,8 @@
 
 class DistanceSensor {
 public:
+    using DistanceType = std::remove_extent_t<decltype(VL53L5CX_ResultsData::distance_mm)>;
+
     enum class Resolution : uint8_t {
         RES_4X4,
         RES_8X8,
@@ -12,6 +14,8 @@ public:
 
     bool begin(Resolution resolution = Resolution::RES_8X8);
     bool update();
+
+    uint8_t countBlockedPixels(DistanceType threshold, uint8_t border = 0) const;
 
     const VL53L5CX_ResultsData& getLastMeasurement() const { return m_lastMeasurement; }
     uint8_t getResolution() const { return m_resolution; }

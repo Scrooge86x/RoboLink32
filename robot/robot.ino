@@ -70,7 +70,7 @@ void setupUdpServer() {
         const auto& measurement{ g_distanceSensor.getLastMeasurement() };
         packet.write(
           reinterpret_cast<const uint8_t*>(measurement.distance_mm),
-          g_distanceSensor.getResolution() * sizeof(distanceSensor::DistanceType)
+          g_distanceSensor.getResolution() * sizeof(DistanceSensor::DistanceType)
         );
       } break;
       case '1':
@@ -101,13 +101,8 @@ void loop() {
   g_distanceSensor.update();
   const auto& measurement{ g_distanceSensor.getLastMeasurement() };
 
-  uint8_t count{};
-  for (uint8_t i{}; i < g_distanceSensor.getResolution(); ++i) {
-    if (measurement.distance_mm[i] <= control::OBSTACLE_THRESHOLD_MM) {
-      ++count;
-    }
-  }
-  g_forwardEnabled = count <= control::MAX_BLOCKED_PIXELS;
+  uint8_t blockedPixels{ g_distanceSensor.countBlockedPixels(control::OBSTACLE_THRESHOLD_MM, 1) };
+  g_forwardEnabled = blockedPixels <= control::MAX_BLOCKED_PIXELS;
 
   delay(50);
 }
