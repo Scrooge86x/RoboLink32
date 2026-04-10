@@ -41,18 +41,28 @@ bool DistanceSensor::update() {
     if (!m_imager.isDataReady()) {
         return false;
     }
-    return m_imager.getRangingData(&m_lastMeasurement);
+
+    VL53L5CX_ResultsData tempResults{};
+    if (!m_imager.getRangingData(&tempResults)) {
+        return false;
+    }
+
+    memcpy(m_distanceData + 1, tempResults.distance_mm, m_resolution * sizeof(DistanceType));
+    return true;
 }
 
 uint8_t DistanceSensor::countBlockedPixels(DistanceType threshold, uint8_t border) const {
     uint8_t count{};
+    const DistanceType* distances{ getDistanceData() };
+
     for (uint8_t y{ border }; y < m_width - border; ++y) {
         for (uint8_t x{ border }; x < m_width - border; ++x) {
             const uint8_t index{ y * m_width + x };
-            if (m_lastMeasurement.distance_mm[index] <= threshold) {
+            if (distances[index] <= threshold) {
                 ++count;
             }
         }
     }
+
     return count;
 }

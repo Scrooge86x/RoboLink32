@@ -12,4 +12,4 @@ void stop();
 
 }
 
-#endif
+#endif // MOTOR_H

@@ -2,95 +2,69 @@
 #include "distance-sensor.h"
 #include "motor.h"
 
-#include <AsyncUDP.h>
+#include <esp_now.h>
 #include <WiFi.h>
-#include <Wire.h>
 
-const char* ssid{ "secret-wifi-network" };
-const char* password{ "p@ssw0rd" };
-
-AsyncUDP udp;
 DistanceSensor g_distanceSensor{};
 
 bool g_forwardEnabled{};
 unsigned long g_lastControlTime{};
 
-void handleInput(const char input) {
-  switch (input) {
-    case 'w':
-      if (!g_forwardEnabled) {
-        return;
-      }
-      motor::forward(control::SLOW_SPEED);
-      break;
-    case 'W':
-      if (!g_forwardEnabled) {
-        return;
-      }
-      motor::forward(control::FAST_SPEED);
-      break;
-    case 's': motor::reverse(control::SLOW_SPEED); break;
-    case 'S': motor::reverse(control::FAST_SPEED); break;
-    case 'a': motor::left(control::SLOW_SPEED);    break;
-    case 'A': motor::left(control::FAST_SPEED);    break;
-    case 'd': motor::right(control::SLOW_SPEED);   break;
-    case 'D': motor::right(control::FAST_SPEED);   break;
-    default: break;
+void onEspNowDataRecv(const esp_now_recv_info_t* espNowInfo, const uint8_t* data, int length) {
+  if (length < 1) {
+    return;
+  }
+
+  switch (static_cast<Command>(data[0])) {
+    case Command::forwardSlow:  motor::forward(control::SLOW_SPEED); break;
+    case Command::forwardFast:  motor::forward(control::FAST_SPEED); break;
+    case Command::backwardSlow: motor::reverse(control::SLOW_SPEED); break;
+    case Command::backwardFast: motor::reverse(control::FAST_SPEED); break;
+    case Command::leftSlow:     motor::left(control::SLOW_SPEED);    break;
+    case Command::leftFast:     motor::left(control::FAST_SPEED);    break;
+    case Command::rightSlow:    motor::right(control::SLOW_SPEED);   break;
+    case Command::rightFast:    motor::right(control::FAST_SPEED);   break;
+    case Command::requestDistanceData:
+      esp_now_send(
+        connection::peerAddress,
+        g_distanceSensor.getSendBuffer(),
+        g_distanceSensor.getSendBufferSize()
+      );
+      return;
   }
 
   g_lastControlTime = millis();
-}
-
-void setupUdpServer() {
-  Serial.println();
-  Serial.println(F("Configuring access point..."));
-
-  WiFi.mode(WIFI_AP);
-  if (!WiFi.softAP(ssid, password)) {
-    Serial.println(F("Soft AP creation failed."));
-    while (1)
-      ;
-  }
-
-  IPAddress myIP = WiFi.softAPIP();
-  Serial.print(F("AP IP address: "));
-  Serial.println(myIP);
-
-  Serial.println(F("Server started"));
-
-  if (!udp.listen(1234)) {
-    Serial.println(F("UDP listen failed."));
-    while (1)
-      ;
-  }
-
-  udp.onPacket([](AsyncUDPPacket packet) {
-    switch (packet.data()[0]) {
-      case '0': {
-        const auto& measurement{ g_distanceSensor.getLastMeasurement() };
-        packet.write(
-          reinterpret_cast<const uint8_t*>(measurement.distance_mm),
-          g_distanceSensor.getResolution() * sizeof(DistanceSensor::DistanceType)
-        );
-      } break;
-      case '1':
-        Serial.printf("%c", packet.data()[1]);
-        handleInput(packet.data()[1]);
-        break;
-    }
-  });
 }
 
 void setup() {
   Serial.begin(115200);
 
   if (!g_distanceSensor.begin()) {
-      while (1)
-        ;
+    while (1)
+      ;
   }
 
   motor::setup();
-  setupUdpServer();
+
+  if (esp_now_init() != ESP_OK) {
+    Serial.println(F("Error initializing ESP-NOW."));
+    while (1)
+      ;
+  }
+
+  esp_now_peer_info_t peerInfo{};
+  peerInfo.channel = connection::channel;
+  peerInfo.encrypt = false;
+  peerInfo.ifidx = WIFI_IF_STA;
+  memcpy(peerInfo.peer_addr, connection::peerAddress, 6);
+
+  if (esp_now_add_peer(&peerInfo) != ESP_OK) {
+    Serial.println(F("Failed to add ESP-NOW peer."));
+    while (1)
+      ;
+  }
+
+  esp_now_register_recv_cb(onEspNowDataRecv);
 }
 
 void loop() {
@@ -99,7 +73,6 @@ void loop() {
   }
 
   g_distanceSensor.update();
-  const auto& measurement{ g_distanceSensor.getLastMeasurement() };
 
   uint8_t blockedPixels{ g_distanceSensor.countBlockedPixels(control::OBSTACLE_THRESHOLD_MM, 1) };
   g_forwardEnabled = blockedPixels <= control::MAX_BLOCKED_PIXELS;

@@ -19,11 +19,10 @@ constexpr uint8_t RST{ 9 };
 
 } // pins
 
-namespace wifi {
+namespace connection {
 
-constexpr char ssid[]{ "secret-wifi-network" };
-constexpr char password[]{ "p@ssw0rd" };
-constexpr uint16_t udpPort{ 1234 };
+constexpr uint8_t peerAddress[]{};
+constexpr uint8_t channel{ 1 };
 
 } // wifi
 
@@ -37,4 +36,4 @@ constexpr unsigned long TIMEOUT_MS{ 100 };
 
 } // control
 
-#endif
+#endif // CONFIG_H
