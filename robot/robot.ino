@@ -15,6 +15,8 @@ void onEspNowDataRecv(const esp_now_recv_info_t* espNowInfo, const uint8_t* data
     return;
   }
 
+  Serial.println(data[0]);
+
   switch (static_cast<Command>(data[0])) {
     case Command::forwardSlow:  motor::forward(control::SLOW_SPEED); break;
     case Command::forwardFast:  motor::forward(control::FAST_SPEED); break;
@@ -45,6 +47,9 @@ void setup() {
   }
 
   motor::setup();
+
+  WiFi.mode(WIFI_STA);
+  WiFi.setChannel(1, WIFI_SECOND_CHAN_NONE);
 
   if (esp_now_init() != ESP_OK) {
     Serial.println(F("Error initializing ESP-NOW."));

@@ -21,14 +21,14 @@ constexpr uint8_t RST{ 9 };
 
 namespace connection {
 
-constexpr uint8_t peerAddress[]{};
+constexpr uint8_t peerAddress[]{0x3C, 0x84, 0x27, 0x26, 0xE6, 0x28};
 constexpr uint8_t channel{ 1 };
 
 } // wifi
 
 namespace control {
 
-constexpr uint16_t OBSTACLE_THRESHOLD_MM{ 100 };
+constexpr uint16_t OBSTACLE_THRESHOLD_MM{ 150 };
 constexpr uint8_t MAX_BLOCKED_PIXELS{ 12 };
 constexpr int SLOW_SPEED{ 130 };
 constexpr int FAST_SPEED{ 255 };
