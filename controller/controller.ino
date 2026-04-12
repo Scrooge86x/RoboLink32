@@ -8,8 +8,7 @@
 TFT_eSPI tft = TFT_eSPI();
 TFT_eSprite spr = TFT_eSprite(&tft);
 
-uint8_t rawDistanceData[message::TOTAL_BYTES]{};
-const int16_t* distancePtr = nullptr;
+uint16_t distanceData[message::GRID_SIZE][message::GRID_SIZE]{};
 
 constexpr int16_t MIN_DISTANCE{20};
 constexpr int16_t MAX_DISTANCE{200};
@@ -25,8 +24,7 @@ void printDistanceGrid() {
 
   for (uint8_t y = 0; y < message::GRID_SIZE; y++) {
         for (uint8_t x = 0; x < message::GRID_SIZE; x++) {
-            uint8_t idx = y * message::GRID_SIZE + x;
-            int16_t dist = distancePtr[idx];
+            int16_t dist = distanceData[y][x];
 
             Serial.print(dist);
             Serial.print(F("  "));
@@ -56,8 +54,7 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
 
   switch (static_cast<Command>(incomingData[0])) {
     case Command::distanceData:
-      std::copy(incomingData + 1, incomingData + message::TOTAL_BYTES, rawDistanceData);
-      distancePtr = reinterpret_cast<const int16_t*>(rawDistanceData);
+      memcpy(distanceData, incomingData + 1, message::TOTAL_BYTES);
       printDistanceGrid();
       draw();
     break;
@@ -115,7 +112,7 @@ void draw() {
 
   for (uint8_t y = 0; y < grid; y++) {
     for (uint8_t x = 0; x < grid; x++) {
-      int16_t dist = distancePtr[y * grid + x];
+      uint16_t dist = distanceData[y][x];
 
       uint16_t color = getHeatmapColor(dist);
 
