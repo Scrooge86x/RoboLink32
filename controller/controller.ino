@@ -212,4 +212,5 @@ void setup() {
 
 void loop() {
   requestDataFromRobot();
+  handleMovement();
 }
