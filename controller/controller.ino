@@ -133,25 +133,19 @@ void handleMovement() {
 
   bool fastMode = (digitalRead(pins::KEY_A) == LOW);
 
-  Command cmd{};
-
   if (digitalRead(pins::J_UP) == LOW) {
-    cmd = fastMode ? Command::forwardFast : Command::forwardSlow;
-  }
-  else if (digitalRead(pins::J_DOWN) == LOW) {
-    cmd = fastMode ? Command::backwardFast : Command::backwardSlow;
-  }
-  else if (digitalRead(pins::J_LEFT) == LOW) {
-    cmd = fastMode ? Command::leftFast : Command::leftSlow;
-  }
-  else if (digitalRead(pins::J_RIGHT) == LOW) {
-    cmd = fastMode ? Command::rightFast : Command::rightSlow;
+    sendCommand(fastMode ? Command::forwardFast : Command::forwardSlow);
+  } else if (digitalRead(pins::J_DOWN) == LOW) {
+    sendCommand(fastMode ? Command::backwardFast : Command::backwardSlow);
+  } else if (digitalRead(pins::J_LEFT) == LOW) {
+    sendCommand(fastMode ? Command::leftFast : Command::leftSlow);
+  } else if (digitalRead(pins::J_RIGHT) == LOW) {
+    sendCommand(fastMode ? Command::rightFast : Command::rightSlow);
+  } else {
+    return;
   }
 
-  if (cmd != Command{}) {
-    sendCommand(cmd);
-    lastSend = millis();
-  }
+  lastSend = millis();
 }
 
 void setupScreen() {
