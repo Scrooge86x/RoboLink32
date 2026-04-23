@@ -18,8 +18,18 @@ void onEspNowDataRecv(const esp_now_recv_info_t* espNowInfo, const uint8_t* data
   Serial.println(data[0]);
 
   switch (static_cast<Command>(data[0])) {
-    case Command::forwardSlow:  motor::forward(control::SLOW_SPEED); break;
-    case Command::forwardFast:  motor::forward(control::FAST_SPEED); break;
+    case Command::forwardSlow:
+      if (!g_forwardEnabled) {
+        return;
+      }
+      motor::forward(control::SLOW_SPEED); 
+      break;
+    case Command::forwardFast:
+      if (!g_forwardEnabled) {
+        return;
+      }
+      motor::forward(control::FAST_SPEED); 
+      break;
     case Command::backwardSlow: motor::reverse(control::SLOW_SPEED); break;
     case Command::backwardFast: motor::reverse(control::FAST_SPEED); break;
     case Command::leftSlow:     motor::left(control::SLOW_SPEED);    break;
