@@ -37,10 +37,27 @@ Preferences prefs;
 
 // =======================================================
 
+void addPairedPeer() {
+    if (!espnow::hasPairedRobot) return;
+    
+    esp_now_peer_info_t peerInfo = {};
+    memcpy(peerInfo.peer_addr, espnow::pairedMac, 6);
+    peerInfo.channel = 0;           // 0 = current channel
+    peerInfo.encrypt = false;
+
+    if (esp_now_add_peer(&peerInfo) != ESP_OK) {
+        Serial.println("Failed to add peer");
+    } else {
+        Serial.println("Paired robot added as peer");
+    }
+}
+
 void loadPairedMac() {
     prefs.begin("robot", true);
     if (prefs.getBytes("mac", espnow::pairedMac, 6) == 6) {
         espnow::hasPairedRobot = true;
+        uint8_t savedChannel = prefs.getUChar("channel", espnow::WIFI_CHANNEL);
+        WiFi.setChannel(savedChannel, WIFI_SECOND_CHAN_NONE);
         Serial.println("Loaded paired robot MAC");
     }
     prefs.end();
@@ -112,13 +129,15 @@ void handlePairingBroadcast(const uint8_t* mac, const uint8_t* data, int len) {
 
     char name[20] = "Unknown";
     if (len > 0) {
-        strncpy(name, (const char*)data, sizeof(name)-1);
-        name[sizeof(name)-1] = '\0';
+      int copyLen = min(len, (int)sizeof(name)-1);
+      strncpy(name, (const char*)data, copyLen);
+      name[copyLen] = '\0';
     }
 
     for (auto& robot : discoveredRobots) {
         if (memcmp(robot.mac, mac, 6) == 0) {
             strncpy(robot.name, name, sizeof(robot.name)-1);
+            robot.name[sizeof(robot.name)-1] = '\0';
             robot.lastSeen = millis();
             return;
         }
@@ -127,6 +146,7 @@ void handlePairingBroadcast(const uint8_t* mac, const uint8_t* data, int len) {
     DiscoveredRobot r;
     memcpy(r.mac, mac, 6);
     strncpy(r.name, name, sizeof(r.name)-1);
+    r.name[sizeof(r.name)-1] = '\0';
     r.lastSeen = millis();
     discoveredRobots.push_back(r);
 }
@@ -154,15 +174,31 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
     case Command::distanceData:
       memcpy(distanceData, incomingData + 1, message::TOTAL_BYTES);
       printDistanceGrid();
-      drawMainScreen();
+      if (currentScreen == Screen::Main) {
+        drawMainScreen();
+      }
     break;
     case Command::broadcastPairing:
       handlePairingBroadcast(info->src_addr, incomingData + 1, len - 1);
     break;
     case Command::pairSuccess:
+      uint8_t channel = 1;
+      if (len >= 2) {
+        channel = incomingData[1];
+      }
+
       savePairedMac(info->src_addr);
+
+      prefs.begin("robot", false);
+      prefs.putUChar("channel", channel);
+      prefs.end();
+
+      WiFi.setChannel(channel, WIFI_SECOND_CHAN_NONE);
+
       currentScreen = Screen::Main;
       Serial.println("=== Pairing SUCCESS ===");
+
+      addPairedPeer();
     break;
     case Command::pairReject:
       Serial.println("Pairing rejected by robot");
@@ -311,12 +347,6 @@ void handleMovement() {
   static unsigned long lastSend = 0;
   const unsigned long interval = 120;
 
-  if (digitalRead(pins::KEY_Y) == LOW) {
-    handlePairingInput();
-  }
-
-  if ()
-
   if (millis() - lastSend < interval) {
     return;
   }
@@ -383,6 +413,10 @@ void setup() {
   setupKeys();
   setupJoystick();
   setupESPNow();
+
+  loadPairedMac();
+  addPairedPeer();
+
   Serial.println("Initialization completed.");
 }
 
