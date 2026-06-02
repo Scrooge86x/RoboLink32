@@ -10,6 +10,6 @@ void left(int speed);
 void right(int speed);
 void stop();
 
-}
+} // motor
 
 #endif // MOTOR_H

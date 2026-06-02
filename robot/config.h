@@ -19,12 +19,9 @@ constexpr uint8_t RST{ 9 };
 
 } // pins
 
-namespace connection {
-
-constexpr uint8_t peerAddress[]{0x3C, 0x84, 0x27, 0x26, 0xE6, 0x28};
-constexpr uint8_t channel{ 1 };
-
-} // wifi
+namespace buttons {
+    constexpr uint8_t PAIR{ 0 };
+} // buttons
 
 namespace control {
 
@@ -35,5 +32,16 @@ constexpr int FAST_SPEED{ 255 };
 constexpr unsigned long TIMEOUT_MS{ 100 };
 
 } // control
+
+namespace pairing {
+
+constexpr uint8_t broadcastChannel{ 6 };
+constexpr uint16_t announceIntervalMs{ 1000 };
+constexpr uint16_t timeoutMs{ 15000 };
+constexpr uint16_t holdTimeMs{ 2500 };
+constexpr const char robotName[]{ "RoboLink32" };
+constexpr size_t maxNameLength{ 32 };
+
+} // pairing
 
 #endif // CONFIG_H

@@ -1,6 +1,7 @@
 #include "config.h"
 #include "distance-sensor.h"
 #include "motor.h"
+#include "pairing.h"
 
 #include <esp_now.h>
 #include <WiFi.h>
@@ -11,86 +12,109 @@ bool g_forwardEnabled{};
 unsigned long g_lastControlTime{};
 
 void onEspNowDataRecv(const esp_now_recv_info_t* espNowInfo, const uint8_t* data, int length) {
-  if (length < 1) {
-    return;
-  }
-
-  Serial.println(data[0]);
-
-  switch (static_cast<Command>(data[0])) {
-    case Command::forwardSlow:
-      if (!g_forwardEnabled) {
+    if (length < 1) {
         return;
-      }
-      motor::forward(control::SLOW_SPEED); 
-      break;
-    case Command::forwardFast:
-      if (!g_forwardEnabled) {
-        return;
-      }
-      motor::forward(control::FAST_SPEED); 
-      break;
-    case Command::backwardSlow: motor::reverse(control::SLOW_SPEED); break;
-    case Command::backwardFast: motor::reverse(control::FAST_SPEED); break;
-    case Command::leftSlow:     motor::left(control::SLOW_SPEED);    break;
-    case Command::leftFast:     motor::left(control::FAST_SPEED);    break;
-    case Command::rightSlow:    motor::right(control::SLOW_SPEED);   break;
-    case Command::rightFast:    motor::right(control::FAST_SPEED);   break;
-    case Command::requestDistanceData:
-      esp_now_send(
-        connection::peerAddress,
-        g_distanceSensor.getSendBuffer(),
-        g_distanceSensor.getSendBufferSize()
-      );
-      return;
-  }
+    }
 
-  g_lastControlTime = millis();
+    if (pairing::isActive()) {
+        pairing::onDataRecv(espNowInfo->src_addr, data, length);
+        return;
+    }
+
+    if (!pairing::isPaired()) {
+        return;
+    }
+    if (memcmp(espNowInfo->src_addr, pairing::getPairedMac(), 6) != 0) {
+        return;
+    }
+
+    switch (static_cast<Command>(data[0])) {
+        case Command::backwardSlow: motor::reverse(control::SLOW_SPEED); break;
+        case Command::backwardFast: motor::reverse(control::FAST_SPEED); break;
+        case Command::leftSlow:     motor::left(control::SLOW_SPEED);    break;
+        case Command::leftFast:     motor::left(control::FAST_SPEED);    break;
+        case Command::rightSlow:    motor::right(control::SLOW_SPEED);   break;
+        case Command::rightFast:    motor::right(control::FAST_SPEED);   break;
+        case Command::forwardSlow:
+            if (g_forwardEnabled) {
+                motor::forward(control::SLOW_SPEED);
+            }
+            break;
+        case Command::forwardFast:
+            if (g_forwardEnabled) {
+                motor::forward(control::FAST_SPEED);
+            }
+            break;
+        case Command::requestDistanceData:
+            esp_now_send(
+                pairing::getPairedMac(),
+                g_distanceSensor.getSendBuffer(),
+                g_distanceSensor.getSendBufferSize()
+            );
+            return;
+        default:
+            return;
+    }
+
+    g_lastControlTime = millis();
 }
 
 void setup() {
-  Serial.begin(115200);
+    randomSeed(esp_random());
+    Serial.begin(115200);
 
-  if (!g_distanceSensor.begin()) {
-    while (1)
-      ;
-  }
+    if (!g_distanceSensor.begin()) {
+        while (1)
+          ;
+    }
 
-  motor::setup();
+    WiFi.mode(WIFI_STA);
+    WiFi.setChannel(1, WIFI_SECOND_CHAN_NONE);
 
-  WiFi.mode(WIFI_STA);
-  WiFi.setChannel(1, WIFI_SECOND_CHAN_NONE);
+    if (esp_now_init() != ESP_OK) {
+        Serial.println(F("Error initializing ESP-NOW."));
+        while (1)
+            ;
+    }
 
-  if (esp_now_init() != ESP_OK) {
-    Serial.println(F("Error initializing ESP-NOW."));
-    while (1)
-      ;
-  }
+    esp_now_register_recv_cb(onEspNowDataRecv);
 
-  esp_now_peer_info_t peerInfo{};
-  peerInfo.channel = connection::channel;
-  peerInfo.encrypt = false;
-  peerInfo.ifidx = WIFI_IF_STA;
-  memcpy(peerInfo.peer_addr, connection::peerAddress, 6);
-
-  if (esp_now_add_peer(&peerInfo) != ESP_OK) {
-    Serial.println(F("Failed to add ESP-NOW peer."));
-    while (1)
-      ;
-  }
-
-  esp_now_register_recv_cb(onEspNowDataRecv);
+    motor::setup();
+    pairing::setup();
 }
 
 void loop() {
-  if (millis() - g_lastControlTime > control::TIMEOUT_MS) {
-    motor::stop();
-  }
+    static unsigned long buttonPressStart{};
+    static bool buttonWasPressed{};
 
-  g_distanceSensor.update();
+    pairing::update();
 
-  uint8_t blockedPixels{ g_distanceSensor.countBlockedPixels(control::OBSTACLE_THRESHOLD_MM, 1) };
-  g_forwardEnabled = blockedPixels <= control::MAX_BLOCKED_PIXELS;
+    if (pairing::isActive()) {
+        delay(10);
+        return;
+    }
 
-  delay(50);
+    bool nowPressed = (digitalRead(buttons::PAIR) == LOW);
+    if (nowPressed && !buttonWasPressed) {
+        buttonPressStart = millis();
+    }
+    if (nowPressed && (millis() - buttonPressStart >= pairing::holdTimeMs)) {
+        pairing::start();
+        buttonPressStart = millis();
+    }
+    if (!nowPressed) {
+        buttonWasPressed = false;
+    }
+    buttonWasPressed = nowPressed;
+
+    if (millis() - g_lastControlTime > control::TIMEOUT_MS) {
+        motor::stop();
+    }
+
+    g_distanceSensor.update();
+
+    uint8_t blockedPixels{ g_distanceSensor.countBlockedPixels(control::OBSTACLE_THRESHOLD_MM, 1) };
+    g_forwardEnabled = blockedPixels <= control::MAX_BLOCKED_PIXELS;
+
+    delay(50);
 }
