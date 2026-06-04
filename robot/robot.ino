@@ -70,8 +70,6 @@ void setup() {
     }
 
     WiFi.mode(WIFI_STA);
-    WiFi.setChannel(1, WIFI_SECOND_CHAN_NONE);
-
     if (esp_now_init() != ESP_OK) {
         Serial.println(F("Error initializing ESP-NOW."));
         while (1)
@@ -84,9 +82,19 @@ void setup() {
     pairing::setup();
 }
 
+static bool readPairButton() {
+    pinMode(buttons::PAIR, INPUT_PULLUP);
+    delayMicroseconds(10);
+    bool pressed = (digitalRead(buttons::PAIR) == LOW);
+    pinMode(buttons::PAIR, OUTPUT);
+    digitalWrite(buttons::PAIR, LOW);
+    return pressed;
+}
+
 void loop() {
     static unsigned long buttonPressStart{};
     static bool buttonWasPressed{};
+    static bool holdTriggered{}; 
 
     pairing::update();
 
@@ -95,16 +103,18 @@ void loop() {
         return;
     }
 
-    bool nowPressed = (digitalRead(buttons::PAIR) == LOW);
+    bool nowPressed = readPairButton();
     if (nowPressed && !buttonWasPressed) {
         buttonPressStart = millis();
+        holdTriggered = false;
     }
-    if (nowPressed && (millis() - buttonPressStart >= pairing::holdTimeMs)) {
+    if (nowPressed && !holdTriggered && (millis() - buttonPressStart >= pairing::holdTimeMs)) {
         pairing::start();
-        buttonPressStart = millis();
+        holdTriggered = true;
     }
     if (!nowPressed) {
         buttonWasPressed = false;
+        holdTriggered = false;
     }
     buttonWasPressed = nowPressed;
 
