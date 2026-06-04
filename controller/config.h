@@ -1,7 +1,6 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#include "WiFi.h"
 #include <TFT_eSPI.h>
 
 namespace pins {
@@ -37,12 +36,6 @@ constexpr uint8_t ROTATION{ 1 };
 
 } // LCD Screen
 
-namespace espnow {
-
-constexpr wifi_mode_t WIFI_MODE{ WIFI_STA };
-
-} // espnow
-
 namespace message {
 
   constexpr uint8_t GRID_SIZE{ 8 };
@@ -61,8 +54,8 @@ const uint16_t COLOR_BG = TFT_BLACK;
 
 namespace pairing {
 
-constexpr uint8_t BROADCAST_CHANNEL = 6;
-constexpr uint8_t DEFAULT_CHANNEL   = 1;
+constexpr uint8_t BROADCAST_CHANNEL = 1;
+constexpr uint8_t DEFAULT_CHANNEL   = 2;
 
 }
 #endif

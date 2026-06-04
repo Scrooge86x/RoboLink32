@@ -104,6 +104,9 @@ void loop() {
     }
 
     bool nowPressed = readPairButton();
+
+    unsigned long pressDuration = (nowPressed && buttonWasPressed) ? (millis() - buttonPressStart) : 0;
+
     if (nowPressed && !buttonWasPressed) {
         buttonPressStart = millis();
         holdTriggered = false;
