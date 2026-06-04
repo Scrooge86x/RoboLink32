@@ -20,7 +20,7 @@ constexpr uint8_t RST{ 9 };
 } // pins
 
 namespace buttons {
-    constexpr uint8_t PAIR{ 0 };
+    constexpr uint8_t PAIR{ 9 };
 } // buttons
 
 namespace control {

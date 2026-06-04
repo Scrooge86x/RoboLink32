@@ -62,6 +62,7 @@ void onEspNowDataRecv(const esp_now_recv_info_t* espNowInfo, const uint8_t* data
 void setup() {
     randomSeed(esp_random());
     Serial.begin(115200);
+    pinMode(buttons::PAIR, INPUT_PULLUP);
 
     if (!g_distanceSensor.begin()) {
         while (1)
