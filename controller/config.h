@@ -2,17 +2,17 @@
 #define CONFIG_H
 
 #include "WiFi.h"
-#include "MacAddress.h"
+#include <TFT_eSPI.h>
 
 namespace pins {
 
 // Screen
-constexpr uint8_t TFT_DC{ 33 };
-constexpr uint8_t TFT_CS{ 34 };
-constexpr uint8_t TFT_SCK{ 35 };
-constexpr uint8_t TFT_MOSI{ 36 };
-constexpr uint8_t TFT_RST{ 37 };
-constexpr uint8_t TFT_BL{ 38 };
+constexpr uint8_t TFT_DC_PIN{ 33 };
+constexpr uint8_t TFT_CS_PIN{ 34 };
+constexpr uint8_t TFT_SCK_PIN{ 35 };
+constexpr uint8_t TFT_MOSI_PIN{ 36 };
+constexpr uint8_t TFT_RST_PIN{ 37 };
+constexpr uint8_t TFT_BL_PIN{ 38 };
 
 // Buttons
 constexpr uint8_t KEY_X{ 2 };
@@ -33,21 +33,13 @@ namespace lcdscreen {
 
 constexpr uint16_t WIDTH{ 240 };
 constexpr uint16_t HEIGHT{ 240 };
-constexpr uint8_t ROTATION{ 2 };
+constexpr uint8_t ROTATION{ 1 };
 
 } // LCD Screen
 
 namespace espnow {
 
-constexpr int WIFI_CHANNEL{ 1 };
 constexpr wifi_mode_t WIFI_MODE{ WIFI_STA };
-constexpr wifi_interface_t WIFI_IF = WIFI_IF_STA;
-constexpr uint8_t peerAddress[]{0xDC, 0xDA, 0x0C, 0xA1, 0x4F, 0xA4};
-
-
-uint8_t pairedMac[6]{0};
-bool hasPairedRobot{ false };
-constexpr uint8_t broadcastAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 } // espnow
 
@@ -56,6 +48,21 @@ namespace message {
   constexpr uint8_t GRID_SIZE{ 8 };
   constexpr uint8_t PIXEL_BYTE_SIZE{ 2 };
   constexpr uint8_t TOTAL_BYTES = GRID_SIZE * GRID_SIZE * PIXEL_BYTE_SIZE;
+
+}
+
+namespace heatmap {
+
+constexpr int16_t MIN_DISTANCE = 20;     // mm
+constexpr int16_t MAX_DISTANCE = 800;    // mm
+const uint16_t COLOR_BG = TFT_BLACK;
+
+}
+
+namespace pairing {
+
+constexpr uint8_t BROADCAST_CHANNEL = 6;
+constexpr uint8_t DEFAULT_CHANNEL   = 1;
 
 }
 #endif
