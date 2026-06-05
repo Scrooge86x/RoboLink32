@@ -222,9 +222,10 @@ void cleanupOldRobots() {
 void transformDistanceData(uint16_t src[message::GRID_SIZE][message::GRID_SIZE]) {
     uint16_t temp[message::GRID_SIZE][message::GRID_SIZE];
     memcpy(temp, src, message::TOTAL_BYTES);
+    
     for (uint8_t y = 0; y < message::GRID_SIZE; y++) {
         for (uint8_t x = 0; x < message::GRID_SIZE; x++) {
-            distanceData[y][x] = temp[x][message::GRID_SIZE - 1 - y];
+            distanceData[y][x] = temp[message::GRID_SIZE - 1 - x][y];
         }
     }
 }
@@ -487,7 +488,7 @@ void setupESPNow() {
 
     esp_now_peer_info_t broadcastPeer = {};
     memset(broadcastPeer.peer_addr, 0xFF, 6);
-    broadcastPeer.channel = 0;
+    broadcastPeer.channel = 1;
     broadcastPeer.encrypt = false;
     broadcastPeer.ifidx = WIFI_IF_STA;
     if (esp_now_add_peer(&broadcastPeer) != ESP_OK) {
