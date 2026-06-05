@@ -40,22 +40,23 @@ namespace message {
 
   constexpr uint8_t GRID_SIZE{ 8 };
   constexpr uint8_t PIXEL_BYTE_SIZE{ 2 };
-  constexpr uint8_t TOTAL_BYTES = GRID_SIZE * GRID_SIZE * PIXEL_BYTE_SIZE;
+  constexpr uint8_t TOTAL_BYTES{ GRID_SIZE * GRID_SIZE * PIXEL_BYTE_SIZE };
+  constexpr uint16_t TIMEOUT_MS{ 2000 };
 
 }
 
 namespace heatmap {
 
-constexpr int16_t MIN_DISTANCE = 20;     // mm
-constexpr int16_t MAX_DISTANCE = 800;    // mm
-const uint16_t COLOR_BG = TFT_BLACK;
+constexpr int16_t MIN_DISTANCE{ 20 };     // mm
+constexpr int16_t MAX_DISTANCE{ 800 };    // mm
+const uint16_t COLOR_BG{ TFT_BLACK };
 
 }
 
 namespace pairing {
 
-constexpr uint8_t BROADCAST_CHANNEL = 1;
-constexpr uint8_t DEFAULT_CHANNEL   = 2;
+constexpr uint8_t BROADCAST_CHANNEL{ 1 };
+constexpr uint8_t DEFAULT_CHANNEL{ 2 };
 
 }
 #endif
