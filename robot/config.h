@@ -35,7 +35,7 @@ constexpr unsigned long TIMEOUT_MS{ 100 };
 
 namespace pairing {
 
-constexpr uint8_t broadcastChannel{ 6 };
+constexpr uint8_t broadcastChannel{ 1 };
 constexpr uint16_t announceIntervalMs{ 1000 };
 constexpr uint16_t timeoutMs{ 15000 };
 constexpr uint16_t holdTimeMs{ 2500 };

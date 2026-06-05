@@ -36,14 +36,16 @@ void onEspNowDataRecv(const esp_now_recv_info_t* espNowInfo, const uint8_t* data
         case Command::rightSlow:    motor::right(control::SLOW_SPEED);   break;
         case Command::rightFast:    motor::right(control::FAST_SPEED);   break;
         case Command::forwardSlow:
-            if (g_forwardEnabled) {
-                motor::forward(control::SLOW_SPEED);
+            if (!g_forwardEnabled) {
+                return;
             }
+            motor::forward(control::SLOW_SPEED);
             break;
         case Command::forwardFast:
-            if (g_forwardEnabled) {
-                motor::forward(control::FAST_SPEED);
+            if (!g_forwardEnabled) {
+                return;
             }
+            motor::forward(control::FAST_SPEED);
             break;
         case Command::requestDistanceData:
             esp_now_send(
@@ -70,8 +72,6 @@ void setup() {
     }
 
     WiFi.mode(WIFI_STA);
-    WiFi.setChannel(1, WIFI_SECOND_CHAN_NONE);
-
     if (esp_now_init() != ESP_OK) {
         Serial.println(F("Error initializing ESP-NOW."));
         while (1)
@@ -84,9 +84,19 @@ void setup() {
     pairing::setup();
 }
 
+static bool readPairButton() {
+    pinMode(buttons::PAIR, INPUT_PULLUP);
+    delayMicroseconds(10);
+    bool pressed = (digitalRead(buttons::PAIR) == LOW);
+    pinMode(buttons::PAIR, OUTPUT);
+    digitalWrite(buttons::PAIR, LOW);
+    return pressed;
+}
+
 void loop() {
     static unsigned long buttonPressStart{};
     static bool buttonWasPressed{};
+    static bool holdTriggered{}; 
 
     pairing::update();
 
@@ -95,16 +105,21 @@ void loop() {
         return;
     }
 
-    bool nowPressed = (digitalRead(buttons::PAIR) == LOW);
+    bool nowPressed = readPairButton();
+
+    unsigned long pressDuration = (nowPressed && buttonWasPressed) ? (millis() - buttonPressStart) : 0;
+
     if (nowPressed && !buttonWasPressed) {
         buttonPressStart = millis();
+        holdTriggered = false;
     }
-    if (nowPressed && (millis() - buttonPressStart >= pairing::holdTimeMs)) {
+    if (nowPressed && !holdTriggered && (millis() - buttonPressStart >= pairing::holdTimeMs)) {
         pairing::start();
-        buttonPressStart = millis();
+        holdTriggered = true;
     }
     if (!nowPressed) {
         buttonWasPressed = false;
+        holdTriggered = false;
     }
     buttonWasPressed = nowPressed;
 

@@ -12,15 +12,13 @@ enum class Command : uint8_t {
     leftFast,
     rightSlow,
     rightFast,
-    requestDistanceData,
-    distanceData,
-    requestMPUData,
-    mpuData,
 
     broadcastPairing,
     pairRequest,
     pairSuccess,
-    pairReject,
+
+    requestDistanceData,
+    distanceData,
 };
 
 #endif // COMMANDS_H
