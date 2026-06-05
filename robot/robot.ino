@@ -36,14 +36,16 @@ void onEspNowDataRecv(const esp_now_recv_info_t* espNowInfo, const uint8_t* data
         case Command::rightSlow:    motor::right(control::SLOW_SPEED);   break;
         case Command::rightFast:    motor::right(control::FAST_SPEED);   break;
         case Command::forwardSlow:
-            if (g_forwardEnabled) {
-                motor::forward(control::SLOW_SPEED);
+            if (!g_forwardEnabled) {
+                return;
             }
+            motor::forward(control::SLOW_SPEED);
             break;
         case Command::forwardFast:
-            if (g_forwardEnabled) {
-                motor::forward(control::FAST_SPEED);
+            if (!g_forwardEnabled) {
+                return;
             }
+            motor::forward(control::FAST_SPEED);
             break;
         case Command::requestDistanceData:
             esp_now_send(
