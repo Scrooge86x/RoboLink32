@@ -1,5 +1,6 @@
 #include "config.h"
 #include "commands.h"
+#include "display.h"
 #include <TFT_eSPI.h>
 #include <SPI.h>
 #include <esp_now.h>
@@ -9,20 +10,12 @@
 #include <algorithm>
 #include <cstring>
 
-TFT_eSPI tft = TFT_eSPI();
-TFT_eSprite spr = TFT_eSprite(&tft);
-
+// Globalna tablica odległości (mapa ciepła)
 uint16_t distanceData[message::GRID_SIZE][message::GRID_SIZE]{};
 
 unsigned long lastRequest = 0;
 
 // ====================== PAROWANIE ======================
-struct DiscoveredRobot {
-    uint8_t mac[6];
-    char name[20];
-    unsigned long lastSeen;
-};
-
 std::vector<DiscoveredRobot> discoveredRobots;
 int selectedIndex = 0;
 
@@ -249,7 +242,7 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
                 memcpy(raw, incomingData + 1, message::TOTAL_BYTES);
                 transformDistanceData(raw);
                 if (currentScreen == Screen::Main) {
-                    drawMainScreen();
+                    drawHeatmap(distanceData);
                 }
                 Serial.println("[RX] Distance data received and displayed");
             }
@@ -270,7 +263,7 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
 
             Serial.println("[PAIR] pairSuccess received, finalizing pairing");
             
-            esp_now_del_peer(pendingPairMac);  // bezpieczne
+            esp_now_del_peer(pendingPairMac);
 
             waitingForPairResponse = false;
             uint8_t channel = pairing::DEFAULT_CHANNEL;
@@ -279,13 +272,13 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
             savePairedMac(info->src_addr, channel);
             
             WiFi.setChannel(channel, WIFI_SECOND_CHAN_NONE);
-            delay(80);   // stabilizacja kanału
+            delay(80);
 
             if (addPairedPeer()) {
                 currentScreen = Screen::Main;
                 discoveredRobots.clear();
                 selectedIndex = 0;
-                drawMainScreen();
+                drawHeatmap(distanceData);
                 Serial.printf("[PAIR] Pairing SUCCESS → channel %d\n", channel);
             } else {
                 Serial.println("[PAIR] ERROR: Failed to add paired peer after success");
@@ -297,89 +290,6 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
             Serial.printf("[RX] Unknown command 0x%02X ignored\n", incomingData[0]);
             break;
     }
-}
-
-// ====================== RYSOWANIE ======================
-uint16_t hslToColor565(float h, float s, float l) {
-    float r, g, b;
-    if (s == 0) {
-        r = g = b = l;
-    } else {
-        auto hue2rgb = [](float p, float q, float t) -> float {
-            if (t < 0) t += 1;
-            if (t > 1) t -= 1;
-            if (t < 1.0f/6) return p + (q - p) * 6 * t;
-            if (t < 1.0f/2) return q;
-            if (t < 2.0f/3) return p + (q - p) * (2.0f/3 - t) * 6;
-            return p;
-        };
-        float q = l < 0.5f ? l * (1 + s) : l + s - l * s;
-        float p = 2 * l - q;
-        r = hue2rgb(p, q, h + 1.0f/3);
-        g = hue2rgb(p, q, h);
-        b = hue2rgb(p, q, h - 1.0f/3);
-    }
-    uint8_t red   = (uint8_t)(r * 255);
-    uint8_t green = (uint8_t)(g * 255);
-    uint8_t blue  = (uint8_t)(b * 255);
-    return spr.color565(red, green, blue);
-}
-
-uint16_t getHeatmapColor(uint16_t dist) {
-    if (dist < 0) return TFT_BLACK;
-    int16_t clamped = constrain(dist, heatmap::MIN_DISTANCE, heatmap::MAX_DISTANCE);
-    uint8_t hue = map(clamped, heatmap::MIN_DISTANCE, heatmap::MAX_DISTANCE, 0, 240);
-    return hslToColor565(hue / 360.0f, 1.0f, 0.5f);
-}
-
-void drawNotPaired() {
-    tft.fillScreen(TFT_RED);
-    tft.setTextColor(TFT_WHITE);
-    tft.setTextSize(2);
-    tft.setCursor(20, 120);
-    tft.print("No robot paired");    
-}
-
-void drawMainScreen() {
-    spr.fillSprite(heatmap::COLOR_BG);
-    constexpr uint8_t grid = message::GRID_SIZE;
-    constexpr uint16_t cellWidth  = lcdscreen::WIDTH  / grid;
-    constexpr uint16_t cellHeight = lcdscreen::HEIGHT / grid;
-
-    for (uint8_t y = 0; y < grid; y++) {
-        for (uint8_t x = 0; x < grid; x++) {
-            uint16_t dist = distanceData[y][x];
-            uint16_t color = getHeatmapColor(dist);
-            spr.fillRect(x * cellWidth, y * cellHeight, cellWidth, cellHeight, color);
-        }
-    }
-    spr.pushSprite(0, 0);
-}
-
-void drawPairingMenu() {
-    spr.fillSprite(TFT_BLACK);
-    spr.setTextColor(TFT_WHITE);
-    spr.setTextSize(2);
-    spr.drawString("Select Robot:", 20, 10);
-
-    if (discoveredRobots.empty()) {
-        spr.setTextColor(TFT_RED);
-        spr.drawString("No robots found", 20, 80);
-        spr.pushSprite(0, 0);
-        return;
-    }
-
-    for (size_t i = 0; i < discoveredRobots.size() && i < 7; ++i) {
-        const auto& robot = discoveredRobots[i];
-        bool selected = (i == selectedIndex);
-        uint16_t color = selected ? TFT_YELLOW : TFT_WHITE;
-        uint16_t bg    = selected ? TFT_NAVY   : TFT_BLACK;
-        char line[32];
-        sprintf(line, "%s", robot.name);
-        spr.setTextColor(color, bg);
-        spr.drawString(line, 20, 50 + i * 28);
-    }
-    spr.pushSprite(0, 0);
 }
 
 // ====================== OBSŁUGA PRZYCISKÓW ======================
@@ -423,7 +333,7 @@ void handlePairingInput() {
         drawNotPaired();
         Serial.println("[MENU] Exited pairing menu");
     }
-    if (needRedraw) drawPairingMenu();
+    if (needRedraw) drawPairingMenu(discoveredRobots, selectedIndex);
     if (digitalRead(pins::J_UP) == LOW || digitalRead(pins::J_DOWN) == LOW ||
         digitalRead(pins::KEY_A) == LOW || digitalRead(pins::KEY_B) == LOW) {
         lastInput = millis();
@@ -451,16 +361,6 @@ void handleMovement() {
 }
 
 // ====================== SETUP ======================
-void setupScreen() {
-    pinMode(pins::TFT_BL_PIN, OUTPUT);
-    digitalWrite(pins::TFT_BL_PIN, HIGH);
-    tft.init();
-    tft.setRotation(lcdscreen::ROTATION);
-    if (!spr.createSprite(lcdscreen::WIDTH, lcdscreen::HEIGHT)) {
-        Serial.println("[ERROR] Sprite creation failed!");
-    }
-}
-
 void setupKeys() {
     pinMode(pins::KEY_A, INPUT_PULLUP);
     pinMode(pins::KEY_B, INPUT_PULLUP);
@@ -501,13 +401,13 @@ void setupESPNow() {
 void setup() {
     Serial.begin(115200);
     Serial.println("\n[BOOT] Controller starting");
-    setupScreen();
+    initDisplay();          // Inicjalizacja wyświetlacza (z display.cpp)
     setupKeys();
     setupJoystick();
     setupESPNow();
     loadPairedMac();
     addPairedPeer();
-    drawNotPaired();
+    drawNotPaired();        // Rysowanie ekranu „brak robota”
     Serial.println("[BOOT] Ready");
 }
 
@@ -523,7 +423,7 @@ void loop() {
         } else {
             WiFi.setChannel(pairing::BROADCAST_CHANNEL, WIFI_SECOND_CHAN_NONE);
         }
-        drawPairingMenu();
+        drawPairingMenu(discoveredRobots, selectedIndex);
     }
 
     static unsigned long lastMenuPress = 0;
@@ -535,7 +435,7 @@ void loop() {
                 currentScreen = Screen::PairingMenu;
                 discoveredRobots.clear();
                 selectedIndex = 0;
-                drawPairingMenu();
+                drawPairingMenu(discoveredRobots, selectedIndex);
             } else {
                 if (waitingForPairResponse) {
                     esp_now_del_peer(pendingPairMac);
@@ -549,7 +449,7 @@ void loop() {
                 currentScreen = Screen::Main;
                 discoveredRobots.clear();
                 selectedIndex = 0;
-                drawMainScreen();
+                drawHeatmap(distanceData);
                 Serial.println("[MENU] Exited pairing mode");
             }
             lastMenuPress = millis();
@@ -561,7 +461,7 @@ void loop() {
         if (currentScreen == Screen::PairingMenu) {
             static unsigned long lastDraw = 0;
             if (millis() - lastDraw > 250) {
-                drawPairingMenu();
+                drawPairingMenu(discoveredRobots, selectedIndex);
                 lastDraw = millis();
             }
         }
