@@ -165,10 +165,10 @@ void onDataRecv(const uint8_t* srcMac, const uint8_t* data, int len) {
     esp_now_del_peer(srcMac);
     delay(20);
 
-    int newChannel{};
-    do {
-        newChannel = random(1, 12);
-    } while (newChannel == pairing::broadcastChannel);
+    int newChannel{2};
+    // do {
+    //     newChannel = random(1, 12);
+    // } while (newChannel == pairing::broadcastChannel);
     Serial.printf("[PAIR] Selected new channel for robot: %d\n", newChannel);
 
     // Temp peer
@@ -200,7 +200,7 @@ void onDataRecv(const uint8_t* srcMac, const uint8_t* data, int len) {
     esp_err_t res = esp_now_send(srcMac, pairSuccessResponse, 2);
     Serial.printf("[PAIR] esp_now_send result: %d (%s)\n", res, res == ESP_OK ? "OK" : "FAIL");
 
-    delay(180);
+    delay(1000);
 
     if (res == ESP_OK) {
         delay(40);
