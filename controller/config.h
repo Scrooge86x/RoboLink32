@@ -1,6 +1,7 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#include "User_Setup.h"
 #include <TFT_eSPI.h>
 
 namespace pins {
