@@ -167,7 +167,6 @@ void onDataRecv(const uint8_t* srcMac, const uint8_t* data, int len) {
 
     Serial.printf("[PEER] Removing any previous temp peer: " MACSTR "\n", MAC2STR(srcMac));
     esp_now_del_peer(srcMac);
-    delay(20);
 
     // Channels higher than 2 don't seem to work
     uint8_t newChannel{ 2 };
@@ -180,7 +179,6 @@ void onDataRecv(const uint8_t* srcMac, const uint8_t* data, int len) {
         skipAnnounce = false;
         return;
     }
-    delay(30);
 
     uint8_t pairSuccessResponse[2]{ static_cast<uint8_t>(Command::pairSuccess), newChannel };
 
@@ -190,15 +188,11 @@ void onDataRecv(const uint8_t* srcMac, const uint8_t* data, int len) {
     esp_err_t res{ esp_now_send(srcMac, pairSuccessResponse, 2) };
     Serial.printf("[PAIR] esp_now_send result: %d (%s)\n", res, res == ESP_OK ? "OK" : "FAIL");
 
-    delay(1000);
-
     if (res == ESP_OK) {
         delay(40);
         esp_now_send(srcMac, pairSuccessResponse, 2);
         Serial.println("[PAIR] Sent duplicate pairSuccess");
     }
-
-    delay(30);
 
     Serial.printf("[PEER] Removing temp peer: " MACSTR "\n", MAC2STR(srcMac));
     esp_now_del_peer(srcMac);
@@ -206,7 +200,6 @@ void onDataRecv(const uint8_t* srcMac, const uint8_t* data, int len) {
 
     Serial.printf("[WIFI] Switching robot channel from %d to %d\n", WiFi.channel(), newChannel);
     WiFi.setChannel(newChannel);
-    delay(60);
 
     if (setPairedPeer(srcMac, newChannel)) {
         Serial.println("[PEER] Permanent peer added successfully");
