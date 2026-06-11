@@ -2,11 +2,13 @@
 #include "distance-sensor.h"
 #include "motor.h"
 #include "pairing.h"
+#include "mpu-sensor.h"
 
 #include <esp_now.h>
 #include <WiFi.h>
 
 DistanceSensor g_distanceSensor{};
+MpuSensor g_mpuSensor{};
 
 bool g_forwardEnabled{};
 unsigned long g_lastControlTime{};
@@ -54,6 +56,15 @@ void onEspNowDataRecv(const esp_now_recv_info_t* espNowInfo, const uint8_t* data
                 g_distanceSensor.getSendBufferSize()
             );
             return;
+        case Command::requestMpuData:
+            if (g_mpuSensor.isReady()) {
+                esp_now_send(
+                    pairing::getPairedMac(),
+                    g_mpuSensor.getSendBuffer(),
+                    g_mpuSensor.getSendBufferSize()
+                );
+            }
+            return;
         default:
             return;
     }
@@ -70,6 +81,8 @@ void setup() {
         while (1)
           ;
     }
+
+    g_mpuSensor.begin(pins::MPU_INT);
 
     WiFi.mode(WIFI_STA);
     if (esp_now_init() != ESP_OK) {
@@ -127,6 +140,7 @@ void loop() {
         motor::stop();
     }
 
+    g_mpuSensor.update();
     g_distanceSensor.update();
 
     uint8_t blockedPixels{ g_distanceSensor.countBlockedPixels(control::OBSTACLE_THRESHOLD_MM, 1) };

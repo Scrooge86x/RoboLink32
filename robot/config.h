@@ -16,6 +16,7 @@ constexpr uint8_t PWMA{ 5 };
 constexpr uint8_t SCL{ 7 };
 constexpr uint8_t SDA{ 8 };
 constexpr uint8_t RST{ 9 };
+constexpr uint8_t MPU_INT{ 10 };
 
 } // pins
 
