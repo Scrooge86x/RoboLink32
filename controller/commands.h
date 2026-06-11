@@ -19,6 +19,9 @@ enum class Command : uint8_t {
 
     requestDistanceData,
     distanceData,
+
+    requestMpuData,
+    mpuData,
 };
 
 #endif // COMMANDS_H

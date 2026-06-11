@@ -43,6 +43,8 @@ namespace message {
   constexpr uint8_t PIXEL_BYTE_SIZE{ 2 };
   constexpr uint8_t TOTAL_BYTES{ GRID_SIZE * GRID_SIZE * PIXEL_BYTE_SIZE };
   constexpr uint16_t TIMEOUT_MS{ 2000 };
+  constexpr uint16_t DISTANCE_REQUEST_INTERVAL{ 100 };
+  constexpr uint16_t MPU_REQUEST_INTERVAL{ 500 };
 
 }
 
@@ -59,5 +61,9 @@ namespace pairing {
 constexpr uint8_t BROADCAST_CHANNEL{ 1 };
 constexpr uint8_t DEFAULT_CHANNEL{ 2 };
 
+}
+
+namespace debounce {
+  constexpr uint16_t ANTI_DEBOUNCE_TIMEOUT{ 400 };
 }
 #endif

@@ -1,3 +1,4 @@
+#include "esp32-hal.h"
 #include "comms.h"
 #include "config.h"
 #include "display.h"
@@ -10,6 +11,10 @@
 uint16_t distanceData[message::GRID_SIZE][message::GRID_SIZE]{};
 unsigned long lastRequest{};
 unsigned long lastSeen{ millis() };
+
+bool displayMpu{ false };
+float yaw{ 0.0f }, pitch{ 0.0f }, roll{ 0.0f };
+uint32_t lastMpuRequest{};
 
 extern void printMac(const uint8_t* mac);
 
@@ -26,12 +31,25 @@ void sendCommandTo(const uint8_t* mac, Command cmd) {
 }
 
 void requestDataFromRobot() {
-    if (isPairingMode()) return;
-    if (!isPaired()) return;
-    if (millis() - lastRequest > 100) {
-        sendCommand(Command::requestDistanceData);
-        lastRequest = millis();
+    if (isPairingMode() || !isPaired()) {
+        return;
     }
+    if (millis() - lastRequest < message::DISTANCE_REQUEST_INTERVAL) {
+        return;
+    }
+    sendCommand(Command::requestDistanceData);
+    lastRequest = millis();
+}
+
+void requestMpuDataFromRobot() {
+    if (isPairingMode() || !isPaired() || !displayMpu) {
+        return;
+    }
+    if (millis() - lastMpuRequest < message::MPU_REQUEST_INTERVAL) {
+        return;
+    }
+    sendCommand(Command::requestMpuData);
+    lastMpuRequest = millis();
 }
 
 void transformDistanceData(uint16_t src[message::GRID_SIZE][message::GRID_SIZE]) {
@@ -73,8 +91,19 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
                 drawHeatmap(distanceData);
             }
             Serial.println("[RX] Distance data received and displayed");
-        }
         break;
+        }
+        case Command::mpuData:
+        {
+            if (len < 1 + 3 * sizeof(float)) {
+                break;
+            }
+
+            memcpy(&yaw, incomingData + 1, sizeof(float));
+            memcpy(&pitch, incomingData + 1 + sizeof(float), sizeof(float));
+            memcpy(&roll, incomingData + 1 + 2*sizeof(float), sizeof(float));
+            Serial.println("[RX] MPU data received and displayed");
+        }
 
         default:
             Serial.printf("[RX] Unknown command 0x%02X ignored\n", incomingData[0]);

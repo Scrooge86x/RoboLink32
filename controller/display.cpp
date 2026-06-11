@@ -1,4 +1,5 @@
 #include "display.h"
+#include "comms.h"
 #include <TFT_eSPI.h>
 #include <SPI.h>
 
@@ -55,6 +56,20 @@ void drawNotPaired() {
     spr.pushSprite(0, 0);
 }
 
+static void drawMpuOverlay() {
+    if (!displayMpu) {
+        return;
+    }
+    spr.setTextColor(TFT_BLACK);
+    spr.setTextSize(2);
+    spr.setCursor(5, 5);
+    spr.printf("YAW:   %.1f", yaw);
+    spr.setCursor(5, 20);
+    spr.printf("PITCH: %.1f", pitch);
+    spr.setCursor(5, 35);
+    spr.printf("ROLL:  %.1f", roll);
+}
+
 void drawHeatmap(const uint16_t distanceData[message::GRID_SIZE][message::GRID_SIZE]) {
     spr.fillSprite(heatmap::COLOR_BG);
     constexpr uint8_t grid = message::GRID_SIZE;
@@ -68,6 +83,9 @@ void drawHeatmap(const uint16_t distanceData[message::GRID_SIZE][message::GRID_S
             spr.fillRect(x * cellWidth, y * cellHeight, cellWidth, cellHeight, color);
         }
     }
+
+    drawMpuOverlay();
+
     spr.pushSprite(0, 0);
 }
 
