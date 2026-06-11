@@ -89,7 +89,7 @@ void drawPairingMenu(const std::vector<DiscoveredRobot>& robots, int selectedInd
         bool selected = (i == static_cast<size_t>(selectedIndex));
         uint16_t color = selected ? TFT_YELLOW : TFT_WHITE;
         uint16_t bg    = selected ? TFT_NAVY   : TFT_BLACK;
-        char line[32];
+        char line[20];
         snprintf(line, sizeof(line), "%s", robot.name);
         spr.setTextColor(color, bg);
         spr.drawString(line, 20, 50 + i * 28);

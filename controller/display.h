@@ -7,7 +7,7 @@
 
 struct DiscoveredRobot {
     uint8_t mac[6];
-    char name[20];
+    char name[19];
     unsigned long lastSeen;
 };
 
