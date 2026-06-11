@@ -41,7 +41,6 @@ constexpr uint16_t announceIntervalMs{ 1000 };
 constexpr uint16_t timeoutMs{ 15000 };
 constexpr uint16_t holdTimeMs{ 2500 };
 constexpr const char robotName[]{ "RoboLink32" };
-constexpr size_t maxNameLength{ 32 };
 
 } // pairing
 
