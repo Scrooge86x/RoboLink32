@@ -2,8 +2,6 @@
 #define CONFIG_H
 
 #include <cstdint>
-#include <type_traits>
-#include <SparkFun_VL53L5CX_Library.h>
 
 namespace pins {
 
